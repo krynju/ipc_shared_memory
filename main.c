@@ -10,8 +10,8 @@ int main(int argc, char* argv[]){
 	
 	int segment_id;
 	char* shared_memory;
-	struct shmid_ds shmbuffer;
-	int segment_size;
+	// struct shmid_ds shmbuffer;
+	// int segment_size;
 	const int shared_segment_size = 0x6400;
 	
 	/* Generate "unique" key */
@@ -23,11 +23,16 @@ int main(int argc, char* argv[]){
 	
 	/* Allocate a shared memory segment. */
 	segment_id = shmget(unique_key, shared_segment_size,
-						IPC_CREAT | IPC_EXCL | S_IRUSR | S_IWUSR);
+						IPC_CREAT | S_IRUSR | S_IWUSR);
+	// todo:	remove IPC_EXCL - it fails the shmget when another process
+	//			already allocated shared memory under this key 
 	
 	/* Attach the shared memory segment. */
-	shared_memory = (char*)shmat(segment_id, 0, 0);
-	printf ("shared memory attached at address %p\n", shared_memory);
+	shared_memory = (char*)shmat(segment_id, 0, 0); 
+	// SHM_RND not needed at 3rd argument, because address is null 
+	// so the returned address will be free and aligned to page
+	
+	printf("shared memory attached at address %p\n", shared_memory);
 	
 	/* Determine the segment’s size. */
 	// shmctl (segment_id, IPC_STAT, &shmbuffer);
@@ -41,7 +46,7 @@ int main(int argc, char* argv[]){
 	printf("%s\n", shared_memory);
 	
 	/* Detach the shared memory segment. */
-	shmdt (shared_memory);
+	shmdt(shared_memory);
 	
 	
 	/* Reattach the shared memory segment, at a different address. */
@@ -55,6 +60,6 @@ int main(int argc, char* argv[]){
 	// shmdt (shared_memory);
 	
 	/* Deallocate the shared memory segment. */
-	shmctl (segment_id, IPC_RMID, 0);
+	shmctl(segment_id, IPC_RMID, 0);
 	return 0;
 }
