@@ -5,40 +5,31 @@
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/sem.h>
+#include <helpers.h>
 
 int main(int argc, char* argv[]){
 	key_t unique_key;
 	int segment_id;
+	int semaphore_id;
 	int *shared_memory;
-	const int shared_segment_size = 10 * sizeof(int);
+	const unsigned int shared_segment_size = 10 * sizeof(int);
 	
+	unique_key = generate_key(420);	// Generate "unique" key 
 	
-	/* Generate "unique" key */
-	unique_key = ftok("README.md", 420);
-	if(unique_key == -1){
-		perror("ftok: ");
-		exit(1);
-	}
+	semaphore_id = initialise_semaphore(unique_key);
+
+	segment_id = get_shared_memory_segment_id(unique_key, shared_segment_size);
+	shared_memory = get_shared_memory_handle(segment_id);
 	
-	/* Allocate a shared memory segment. */
-	segment_id = shmget(unique_key, shared_segment_size,
-						IPC_CREAT | S_IRUSR | S_IWUSR);
-						
-	/* Attach the shared memory segment. */
-	shared_memory = (int*)shmat(segment_id, 0, 0); 
-	// SHM_RND not needed at 3rd argument, because address is null 
-	// so the returned address will be free and aligned to page
-	
-	//printf("shared memory attached at address %p\n", shared_memory);
-	shared_memory[0] = 69;
-	
-	/* Read from shared memory */
+	//code start
+	semaphore_wait(semaphore_id, 1);
+	shared_memory[0] = 420;
 	printf("%d\n", shared_memory[0]);
+	//code end
 	
-	/* Detach the shared memory segment. */
-	shmdt(shared_memory);
-	
-	/* Deallocate the shared memory segment. */
-	shmctl(segment_id, IPC_RMID, 0);
+	shmdt(shared_memory);	// Detach the shared memory segment.
+	union semun ignored_argument;
+	semctl(semaphore_id, 1, IPC_RMID, ignored_argument);	// Detach semaphore
+	shmctl(segment_id, IPC_RMID, 0);					// Release shared memory
 	return 0;
 }
