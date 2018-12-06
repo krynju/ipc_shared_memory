@@ -1,7 +1,7 @@
-all: listener_make producer_make
+all: consumer_make producer_make
 
-listener_make: listener.c helpers.h
-	gcc -o listener.out listener.c helpers.h -I .
+consumer_make: consumer.c helpers.h
+	gcc -o consumer consumer.c helpers.h -I .
 
 producer_make: producer.c helpers.h
-	gcc -o producer.out producer.c helpers.h -I .
+	gcc -o producer producer.c helpers.h -I .
