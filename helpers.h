@@ -5,6 +5,9 @@
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/sem.h>
+#include <errno.h>
+
+enum sem_type {MUTEX, EMPTINESS, FULLNESS};
 
 union semun {
     int              val;    /* Value for SETVAL */
@@ -24,9 +27,11 @@ key_t generate_key(int secondary_id){
 
 int get_shared_memory_segment_id(int key, unsigned int size){
 	/* Allocate a shared memory segment. */
-	int segment_id;
-	segment_id = shmget(key, size, IPC_CREAT | S_IRUSR | S_IWUSR);
-	// todo: add error handling
+	int segment_id = shmget(key, size, IPC_CREAT | S_IRUSR | S_IWUSR);
+	if(segment_id == -1){
+		perror("shmget: ");
+		exit(1);
+	}
 	return segment_id;
 }
 
@@ -34,7 +39,10 @@ int *get_shared_memory_handle(int segment_id){
 	int *shared_memory;
 	/* Attach the shared memory segment. */
 	shared_memory = (int*)shmat(segment_id, 0, 0); 
-	// todo: add error handling
+	if(segment_id == -1){
+		perror("shmat: ");
+		exit(1);
+	}
 	return shared_memory;
 }
 
@@ -46,7 +54,7 @@ int semaphore_wait(int semid, int semaphore_num){
 	return semop (semid, operations, 1);
 }
 
-int binary_semaphore_post (int semid, int semaphore_num)
+int semaphore_post (int semid, int semaphore_num)
 {
 	struct sembuf operations[1];
 	operations[0].sem_num = semaphore_num;	// choose the semaphore
@@ -56,13 +64,23 @@ int binary_semaphore_post (int semid, int semaphore_num)
 }
 
 int initialise_semaphore(int key){
-	int semaphore_id = semget(key, 3, IPC_CREAT | S_IRUSR | S_IWUSR); // Allocate semaphore
-	
-	/* Initialise a semaphore */
 	union semun argument;
 	unsigned short values[] = {1,10,0};
+	int semaphore_id = semget(key, 3, IPC_CREAT  | S_IRUSR | S_IWUSR);
+	if(semaphore_id == -1){
+		if(errno == EEXIST){
+			printf("gay\n");
+			return semaphore_id;
+		}else{
+			perror("semget: ");
+			exit(1);
+		}
+	}
 	argument.array = values;
-	semctl(semaphore_id, 0, SETALL, argument);	// init values
+	if(semctl(semaphore_id, 0, SETALL, argument) == -1){
+		perror("semctl SETALL: ");
+		exit(1);
+	}
 	return semaphore_id;
 }
 

@@ -21,11 +21,12 @@ int main(int argc, char* argv[]){
 	shared_memory = get_shared_memory_handle(segment_id);
 	
 	for(int i = 0; i<20; i++){
-		semaphore_wait(semaphore_id, FULLNESS);
+		semaphore_wait(semaphore_id, EMPTINESS);
 		semaphore_wait(semaphore_id, MUTEX);
-		// dequeue
-		printf("dequeue\n");
-		semaphore_post(semaphore_id, EMPTINESS);
+		// enqueue
+		printf("enqueue\n");
+		
+		semaphore_post(semaphore_id, FULLNESS);
 		semaphore_post(semaphore_id, MUTEX);
 		
 		union semun arg;
