@@ -7,7 +7,7 @@
 #include <sys/sem.h>
 #include <errno.h>
 
-enum sem_type {MUTEX, EMPTINESS, FULLNESS};
+enum sem_type {MUTEX, EMPTINESS, FULLNESS, USERS};
 
 union semun {
     int              val;    /* Value for SETVAL */
@@ -46,42 +46,77 @@ int *get_shared_memory_handle(int segment_id){
 	return shared_memory;
 }
 
-int semaphore_wait(int semid, int semaphore_num){
-	struct sembuf operations[1]; /* Use the first (and only) semaphore. */
-	operations[0].sem_num = semaphore_num;
-	operations[0].sem_op = -1; /* Decrement by 1. */
-	operations[0].sem_flg = SEM_UNDO; /* Permit undo’ing. */
-	return semop (semid, operations, 1);
+int get_semaphore_value(int semid, int semnum){
+	union semun arg;
+	return semctl(semid, semnum, GETVAL, arg);
 }
 
-int semaphore_post (int semid, int semaphore_num)
+int semaphore_wait(int semid, int semaphore_num, int flags){
+	struct sembuf operations[1];
+	operations[0].sem_num = semaphore_num;	// choose the semaphore
+	operations[0].sem_op = -1; 				// decrement value
+	operations[0].sem_flg = flags;			// add flags - sometimes SEM_UNDO
+	int result = semop (semid, operations, 1);
+	if(result == -1){
+		perror("semop_post: ");
+		exit(1);
+	}
+	return result;
+}
+
+int semaphore_post(int semid, int semaphore_num, int flags)
 {
 	struct sembuf operations[1];
 	operations[0].sem_num = semaphore_num;	// choose the semaphore
-	operations[0].sem_op = 1;				/* Increment by 1. */
-	operations[0].sem_flg = SEM_UNDO;		/* Permit undo’ing. */
-	return semop (semid, operations, 1);
+	operations[0].sem_op = 1;				// increment value
+	operations[0].sem_flg = flags;			// add flags - sometimes SEM_UNDO
+	int result = semop (semid, operations, 1);
+	if(result == -1){
+		perror("semop_post: ");
+		exit(1);
+	}
+	return result;
 }
 
-int initialise_semaphore(int key){
+int initialise_semaphore(int semaphore_id){
 	union semun argument;
-	unsigned short values[] = {1,10,0};
-	int semaphore_id = semget(key, 3, IPC_CREAT  | S_IRUSR | S_IWUSR);
-	if(semaphore_id == -1){
-		if(errno == EEXIST){
-			printf("gay\n");
-			return semaphore_id;
-		}else{
-			perror("semget: ");
-			exit(1);
-		}
-	}
+	unsigned short values[] = {1,10,0,0};
 	argument.array = values;
 	if(semctl(semaphore_id, 0, SETALL, argument) == -1){
 		perror("semctl SETALL: ");
 		exit(1);
 	}
+}
+
+int get_existing_semaphore(int key){
+	int semaphore_id = semget(key, 4,  0);
+	if(semaphore_id == -1){	
+		perror("semget: ");
+		exit(1);
+	}
 	return semaphore_id;
 }
+
+int get_semaphore(int key){
+	int semaphore_id = semget(key, 4, IPC_CREAT | IPC_EXCL | S_IRUSR | S_IWUSR);
+	if(semaphore_id == -1){	
+		if(errno == EEXIST){
+			return get_existing_semaphore(key);
+		}else{
+			perror("semget: ");
+			exit(1);
+		}
+	}
+	initialise_semaphore(semaphore_id);
+
+	return semaphore_id;
+}
+
+int detach_semaphore(int semaphore_id){
+	union semun arg;
+	semctl(semaphore_id, 0, IPC_RMID, arg);
+}
+
+
 
 
