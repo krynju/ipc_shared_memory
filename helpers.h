@@ -17,7 +17,7 @@ union semun {
 };
 
 key_t generate_key(int secondary_id){
-	key_t unique_key = ftok("README.md", secondary_id);
+	key_t unique_key = ftok(".", secondary_id);
 	if(unique_key == -1){
 		perror("ftok: ");
 		exit(1);
@@ -62,6 +62,14 @@ int semaphore_wait(int semid, int semaphore_num, int flags){
 		exit(1);
 	}
 	return result;
+}
+
+int semaphore_wait_no_errorcheck(int semid, int semaphore_num, int flags){
+	struct sembuf operations[1];
+	operations[0].sem_num = semaphore_num;	// choose the semaphore
+	operations[0].sem_op = -1; 				// decrement value
+	operations[0].sem_flg = flags;			// add flags - sometimes SEM_UNDO
+	return semop (semid, operations, 1);;
 }
 
 int semaphore_post(int semid, int semaphore_num, int flags)

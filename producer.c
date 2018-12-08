@@ -10,7 +10,8 @@
 
 int main(int argc, char* argv[]){
 	int p_id = 0;
-	int s_id = 100;
+	int q_id = 100;
+	int iter = 10;
 	key_t unique_key;
 	int segment_id;
 	int semaphore_id;
@@ -21,17 +22,25 @@ int main(int argc, char* argv[]){
 	int next_empty_index;
 	int rand_number;
 	
-	unique_key = generate_key(s_id);	// Generate "unique" key 
+	if(argc == 4){
+		iter = atol(argv[1]);
+		p_id = atol(argv[2]);
+		q_id = atol(argv[3]);
+	}
+	
+	printf("running producer process %d\n", p_id);
+		
+	unique_key = generate_key(q_id);	// Generate "unique" key 
 	semaphore_id = get_semaphore(unique_key);
 	segment_id = get_shared_memory_segment_id(unique_key, shared_segment_size);
 	shared_memory = get_shared_memory_handle(segment_id);
 	
-	printf("| %-5s\t| %-5s\t| %-5s\t| %-5s\t| %-5s\t| %-5s\t| %-5s\t| %-5s\t|\n", 
-			"iter", "mutex", "empty", "full", "users", "oper", "@indx", "reslt");
+	printf("| %-5s| %-5s| %-5s| %-5s| %-5s| %-5s| %-5s| %-5s| %-5s| %-5s|\n", 
+			"p_id","q_id","iter", "mutex", "empty", "full", "users", "oper", "@indx", "reslt");	
 			
 	semaphore_post(semaphore_id, USERS, SEM_UNDO);
 	
-	for(int i = 0; i<7; i++){
+	for(int i = 0; i<iter; i++){
 		semaphore_wait(semaphore_id, EMPTINESS, 0);
 		semaphore_wait(semaphore_id, MUTEX, SEM_UNDO);
 
@@ -39,13 +48,14 @@ int main(int argc, char* argv[]){
 		rand_number = rand()%32;
 		shared_memory[next_empty_index] = rand_number;
 		
+		semctl(semaphore_id, 0, GETALL, arg);
+		printf("| %-5d| %-5d| %-5d| %-5d| %-5d| %-5d| %-5d| %-5s| %-5d| %-5d|\n", 
+				p_id,q_id,i, arg.array[MUTEX], arg.array[EMPTINESS], arg.array[FULLNESS], 
+				arg.array[USERS], "enq", next_empty_index, rand_number);
+		
 		semaphore_post(semaphore_id, FULLNESS, 0);
 		semaphore_post(semaphore_id, MUTEX, SEM_UNDO);
 		
-		semctl(semaphore_id, 0, GETALL, arg);
-		printf("| %-5d\t| %-5d\t| %-5d\t| %-5d\t| %-5d\t| %-5s\t| %-5d\t| %-5d\t|\n", 
-				i, arg.array[MUTEX], arg.array[EMPTINESS], arg.array[FULLNESS], 
-				arg.array[USERS], "enq", next_empty_index, rand_number);
 		sleep(1);
 	}
 	
@@ -59,6 +69,8 @@ int main(int argc, char* argv[]){
 	}
 	else
 		semaphore_post(semaphore_id, MUTEX, SEM_UNDO);
+	
+	printf("ending producer process %d\n", p_id);
 
 	return 0;
 }
