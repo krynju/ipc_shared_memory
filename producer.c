@@ -48,12 +48,13 @@ int main(int argc, char* argv[]){
 		rand_number = rand()%32;
 		shared_memory[next_empty_index] = rand_number;
 		
+		semaphore_post(semaphore_id, FULLNESS, 0);
+		
 		semctl(semaphore_id, 0, GETALL, arg);
 		printf("| %-5d| %-5d| %-5d| %-5d| %-5d| %-5d| %-5d| %-5s| %-5d| %-5d|\n", 
 				p_id,q_id,i, arg.array[MUTEX], arg.array[EMPTINESS], arg.array[FULLNESS], 
 				arg.array[USERS], "enq", next_empty_index, rand_number);
-		
-		semaphore_post(semaphore_id, FULLNESS, 0);
+				
 		semaphore_post(semaphore_id, MUTEX, SEM_UNDO);
 		
 		sleep(1);

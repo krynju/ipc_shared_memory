@@ -47,12 +47,13 @@ int main(int argc, char* argv[]){
 		previous_full_index = get_semaphore_value(semaphore_id, FULLNESS);
 		read_number = shared_memory[previous_full_index];
 		
+		semaphore_post(semaphore_id, EMPTINESS, 0);
+		
 		semctl(semaphore_id, 0, GETALL, arg);
 		printf("| %-5d| %-5d| %-5d| %-5d| %-5d| %-5d| %-5d| %-5s| %-5d| %-5d|\n", 
 				p_id, q_id, i, arg.array[MUTEX], arg.array[EMPTINESS], arg.array[FULLNESS], 
 				arg.array[USERS], "deq", previous_full_index, read_number);
-
-		semaphore_post(semaphore_id, EMPTINESS, 0);
+		
 		semaphore_post(semaphore_id, MUTEX, SEM_UNDO);
 		
 		sleep(1);

@@ -67,14 +67,15 @@ int main(int argc, char* argv[]){
 		rand_number = rand()%32;
 		shared_memory[queue][next_empty_index] = rand_number;
 		
+		semaphore_post(semaphore_id[queue], FULLNESS, 0);
+		
 		printf("| %-5d| %-5d| %-5d| %-5d| %-5d| %-5d| %-5d| %-5s| %-5d| %-5d|\n", 
 				p_id, q_id[queue], i, get_semaphore_value(semaphore_id[queue], MUTEX), 
 				get_semaphore_value(semaphore_id[queue], EMPTINESS), 
 				get_semaphore_value(semaphore_id[queue], FULLNESS), 
 				get_semaphore_value(semaphore_id[queue], USERS), "enq", 
 				next_empty_index, rand_number);
-		
-		semaphore_post(semaphore_id[queue], FULLNESS, 0);
+				
 		semaphore_post(semaphore_id[queue], MUTEX, SEM_UNDO);
 	
 		sleep(1);
